@@ -74,22 +74,15 @@ def display_time(filetime_high, filetime_low, minutes_utc=0):
 	except ValueError,e:
 		return "0"		
 
-def convert(low, high, no_zero):
+def convert(value):
+	low, high = unpack('<ll', pack("<q", value))
+
 	if low == 0 and hex(high) == "-0x80000000":
 		return "Not Set"
 	if low == 0 and high == 0:
 		return "None"
-	if no_zero: # make sure we have a +ve vale for the unsined int
-		if (low != 0):
-			high = 0 - (high+1)
-		else:
-			high = 0 - (high)
-		# low = 0 - low
-		if low < 0:
-			low = 0 - low
-	tmp = low + (high)*16**8 # convert to 64bit int
-	tmp *= (1e-7) #  convert to seconds
-	tmp = abs(tmp)
+
+	tmp = int(1e-7*-value)
 	try:
 		minutes = int(strftime("%M", gmtime(tmp)))  # do the conversion to human readable format
 	except ValueError, e:
@@ -161,21 +154,18 @@ class MSRPCPassInfo:
 	def set_header(self,data,level):
 		index = 8
 		if level == 1: 
-			self._min_pass_length, self._pass_hist, self._pass_prop, self._max_age_low, self._max_age_high, self._min_age_low, self._min_age_high = unpack('<HHLllll',data[index:index+24])
+			self._min_pass_length, self._pass_hist, self._pass_prop, self._max_age, self._min_age = unpack('<HHLqq',data[index:index+24])
 			bin = d2b(self._pass_prop)
 			if len(bin) != 8:
 				for x in xrange(6 - len(bin)):
 					bin.insert(0,0)
 			self._pass_prop =  ''.join([str(g) for g in bin])	
 		if level == 3:
-			self._max_force_low, self._max_force_high = unpack('<ll',data[index:index+8])
+			self._max_force = unpack('<q',data[index:index+8])[0]
 		if level == 7:
 			self._role = unpack('<L',data[index:index+4])
 		if level == 12:
 			self._lockout_dur, self._lockout_window, self._lockout_thresh = unpack('<qqH',data[index:index+18])
-			# print("Normal: ", self._lockout_dur)
-			self._lockout_dur_low, self.lockout_dur_high = unpack("<ll", pack("<q",self._lockout_dur))
-			self._lockout_window_low, self._lockout_window_high = unpack("<ll", pack("<q",self._lockout_window))
 
 		
 		
@@ -183,19 +173,19 @@ class MSRPCPassInfo:
 	
 		print "\n\t[+] Minimum password length: " + str(self._min_pass_length or "None")
 		print "\t[+] Password history length: " + str(self._pass_hist or "None" )
-		print "\t[+] Maximum password age: " + str(convert(self._max_age_low, self._max_age_high, 1))
+		print "\t[+] Maximum password age: " + str(convert(self._max_age))
 		print "\t[+] Password Complexity Flags: " + str(self._pass_prop or "None") + "\n"
 		i = 0
 		for a in self._pass_prop:
 			#print "BIT " +str(i) + a
 			print "\t\t[+] " + self.PASSCOMPLEX[i] + " " + str(a)
 			i+= 1
-		print "\n\t[+] Minimum password age: " + str(convert(self._min_age_low, self._min_age_high, 1))
-		print "\t[+] Reset Account Lockout Counter: " + str(int(1e-7*-self._lockout_window))+" seconds"
-		print "\t[+] Locked Account Duration: " + str(int(1e-7*-self._lockout_dur))+" seconds"
+		print "\n\t[+] Minimum password age: " + str(convert(self._min_age))
+		print "\t[+] Reset Account Lockout Counter: " + str(convert(self._lockout_window))
+		print "\t[+] Locked Account Duration: " + str(convert(self._lockout_dur))
 		print "\t[+] Account Lockout Threshold: " + str(self._lockout_thresh or "None")
 		#print "Server Role: " + str(self._role[0])
-		print "\t[+] Forced Log off Time: " + str(convert(self._max_force_low, self._max_force_high, 1))
+		print "\t[+] Forced Log off Time: " + str(convert(self._max_force))
 		return
 	
 
