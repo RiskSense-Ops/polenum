@@ -87,21 +87,23 @@ def convert(value):
 		minutes = int(strftime("%M", gmtime(tmp)))  # do the conversion to human readable format
 	except ValueError, e:
 		return "BAD TIME:"
+	print(tmp)
 	hours = int(strftime("%H", gmtime(tmp)))
+	print(hours)
 	days = int(strftime("%j", gmtime(tmp)))-1
 	time = ""
 	if days > 1:
-	 time = str(days) + " days "
+		time += str(days) + " days "
 	elif days == 1:
-		time = str(days) + " day "
+		time += str(days) + " day "
 	if hours > 1:
 		time += str(hours) + " hours "
 	elif hours == 1:
-		time = str(hours) + " hour "	
+		time += str(hours) + " hour "	
 	if minutes > 1:
 		time += str(minutes) + " minutes"
 	elif minutes == 1:
-		time = str(minutes) + " minute "
+		time += str(minutes) + " minute "
 	return time
 
 
